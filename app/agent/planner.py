@@ -4,6 +4,9 @@ from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.agent.state import InvestigationState
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class PlanStep(BaseModel):
@@ -26,7 +29,7 @@ class InvestigationPlan(BaseModel):
 
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
+    model="gemini-3.6-flash",
     temperature=0
 )
 

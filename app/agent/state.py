@@ -9,5 +9,11 @@ class InvestigationState(TypedDict):
     evidence: list[dict]
     hypotheses: list[str]
     evaluation_decision: str | None
+
+    recovery_action: str | None
+    recovery_attempts: int
+    failures: list[dict]
+    fallback_tool: str | None
+
     events: list[str]
     final_report: dict | None

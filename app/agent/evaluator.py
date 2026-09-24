@@ -5,6 +5,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.agent.state import InvestigationState
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class EvaluationResult(BaseModel):
     decision: Literal[
@@ -19,7 +23,7 @@ class EvaluationResult(BaseModel):
 
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
+    model="gemini-3.6-flash",
     temperature=0,
 )
 
