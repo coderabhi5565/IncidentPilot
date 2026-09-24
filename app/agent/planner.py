@@ -1,12 +1,27 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.agent.state import InvestigationState
 
 
+class PlanStep(BaseModel):
+    tool: Literal[
+        "get_service_metrics",
+        "search_logs",
+        "get_recent_deployments",
+        "get_dependency_health",
+    ]
+
+    purpose: str = Field(
+        description="Why this tool should be used during the investigation"
+    )
+
+
 class InvestigationPlan(BaseModel):
-    steps: list[str] = Field(
-        description="Ordered investigation steps required to investigate the incident"
+    steps: list[PlanStep] = Field(
+        description="Ordered investigation steps"
     )
 
 
@@ -22,21 +37,34 @@ def planner_node(state: InvestigationState) -> dict:
     prompt = f"""
 You are a production incident investigation planner.
 
-Create an ordered investigation plan for the following incident:
+Create an ordered investigation plan for this incident:
 
 {state["goal"]}
 
+Available tools:
+- get_service_metrics
+- search_logs
+- get_recent_deployments
+- get_dependency_health
+
 Rules:
+- Use only the available tools.
 - Focus on gathering evidence.
-- Prefer concrete observability checks.
 - Do not diagnose the root cause yet.
-- Return only the investigation steps.
+- Order the investigation logically.
+- Return the investigation steps.
 """
 
     plan = structured_llm.invoke(prompt)
 
     return {
-        "plan": plan.steps,
+        "plan": [
+            {
+                "tool": step.tool,
+                "purpose": step.purpose,
+            }
+            for step in plan.steps
+        ],
         "current_step": 0,
-        "events": ["PLAN_CREATED"]
+        "events": ["PLAN_CREATED"],
     }
