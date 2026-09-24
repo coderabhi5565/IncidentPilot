@@ -16,7 +16,7 @@ TOOL_REGISTRY = {
 
 def investigator_node(state: InvestigationState) -> dict:
     current_step = state["current_step"]
-    plan = state["plan"]
+    plan = state["plan"] 
 
     if current_step >= len(plan):
         return {}
