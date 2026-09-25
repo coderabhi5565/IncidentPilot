@@ -1,439 +1,229 @@
-# IncidentPilot 🚨
+# IncidentPilot
 
-> Autonomous Production Incident Investigation Agent
+**Autonomous Production Incident Investigation Agent**
 
-IncidentPilot is an AI-powered agent designed to investigate software
-production incidents autonomously.
+IncidentPilot is an agentic AI system that investigates backend production incidents using a stateful LangGraph workflow. Given a natural-language incident, it creates an investigation plan, gathers evidence from observability tools, generates hypotheses, evaluates the available evidence, handles tool failures, and produces a structured incident report.
 
-Given a high-level incident description, IncidentPilot decomposes the
-problem into investigation steps, selects and executes relevant tools,
-observes their results, handles tool failures, re-plans when necessary,
-validates its findings, and generates a structured incident report.
+## What It Does
 
-The project focuses on practical Agentic AI engineering:
-planning, tool orchestration, stateful workflows, failure recovery,
-evidence-based reasoning, and agent evaluation.
+Example input:
 
----
+> Investigate the checkout error rate increase in the last 30 minutes.
 
-## 🎯 Problem
+IncidentPilot can:
 
-When a production incident occurs, engineers usually have to manually
-inspect multiple sources such as:
+- Decompose the incident into investigation steps
+- Query metrics, logs, deployments, and dependency health
+- Build structured evidence from tool results
+- Generate and evaluate possible hypotheses
+- Retry failed tools
+- Use fallback evidence sources when available
+- Re-plan when the current investigation strategy is insufficient
+- Preserve uncertainty when evidence is not enough to establish a root cause
+- Produce a structured investigation report
 
-- Service metrics
-- Application logs
-- Deployment history
-- Dependency health
-- Infrastructure events
-
-The investigation process can involve many steps and may require changing
-the investigation strategy when information is missing or a diagnostic
-source becomes unavailable.
-
-IncidentPilot aims to automate this investigation workflow while keeping
-the execution process visible and traceable.
-
----
-
-## 💡 What IncidentPilot Does
-
-A user provides a high-level incident goal such as:
-
-> "Checkout service error rate has increased significantly during the
-> last 30 minutes. Investigate the incident and identify the likely
-> root cause."
-
-IncidentPilot then:
-
-1. Understands the investigation goal
-2. Creates an explicit investigation plan
-3. Executes investigation steps
-4. Uses multiple diagnostic tools
-5. Observes and stores tool results
-6. Collects supporting evidence
-7. Handles tool failures through recovery strategies
-8. Re-plans when the available evidence is insufficient
-9. Evaluates whether the investigation is complete
-10. Generates an evidence-backed incident report
-
----
-
-## 🏗️ High-Level Architecture
+## Architecture
 
 ```text
-                         User
-                           │
-                           ▼
-                      FastAPI API
-                           │
-                           ▼
-                  Investigation Manager
-                           │
-                           ▼
-                       LangGraph
-                           │
-          ┌────────────────┼────────────────┐
-          ▼                ▼                ▼
-       Planner        Investigator       Evaluator
-                           │                │
-                           ▼                │
-                    Tool Orchestrator       │
-                           │                │
-             ┌─────────────┼────────────┐   │
-             ▼             ▼            ▼   │
-          Metrics         Logs      Deployment
-             │             │            │   │
-             └─────────────┼────────────┘   │
-                           │                │
-                           ▼                │
-                       Evidence ────────────┘
-                           │
-                           ▼
-                        Reporter
-                           │
-                           ▼
-                   Incident Report
-🔄 Investigation Workflow
-User Goal
-    │
-    ▼
-Create Investigation
-    │
-    ▼
-Generate Plan
-    │
-    ▼
-Execute Investigation
-    │
-    ▼
-Call Diagnostic Tools
-    │
-    ▼
-Observe Results
-    │
-    ▼
-Evaluate Evidence
-    │
-    ├───────────────┐
-    │               │
-    ▼               ▼
- Sufficient      Insufficient
- Evidence?       Evidence?
-    │               │
-   YES              NO
-    │               │
-    ▼               ▼
- Reporter        Re-plan
-    │               │
-    ▼               └──────► Investigation
- Report
-Failure Flow
-Tool Execution
-      │
-      ▼
-   Failure
-      │
-      ▼
-Recovery Manager
-      │
-      ├──► Retry
-      │
-      ├──► Fallback
-      │
-      └──► Re-plan
-🧰 Investigation Tools
+Natural Language Incident
+          |
+          v
+      Initializer
+          |
+          v
+        Planner
+          |
+          v
+      Investigator
+          |
+          v
+     Observability Tools
+          |
+          v
+       Evidence
+          |
+          v
+      Hypotheses
+          |
+          v
+       Evaluator
+       /    |    \
+      /     |     \
+ Continue  Re-plan  Report
+    |        |        |
+    |        v        v
+    |      Planner  Reporter
+    |                 |
+    +---------------->+
+                      |
+                Final Report
 
-IncidentPilot will operate through dedicated investigation tools.
+The workflow is implemented using LangGraph shared state and conditional routing.
 
-Metrics Tool
+Investigation Tools
 
-Retrieves service health and performance metrics.
+IncidentPilot currently uses four observability tools:
 
-Examples:
+Tool	Purpose
+get_service_metrics	Checks error rate, baseline and latency
+search_logs	Searches recent service errors and timeouts
+get_recent_deployments	Checks recent deployments
+get_dependency_health	Checks downstream dependency health
 
-Error rate
-Latency
-CPU usage
-Memory usage
-Request volume
-Log Analysis Tool
+The tools operate on a deterministic synthetic observability environment.
 
-Searches application logs for relevant errors and patterns.
+Recovery
 
-Deployment Tool
+Tool failures are deliberately testable through a failure injector.
 
-Retrieves recent deployments and configuration changes.
+Tool Failure
+     |
+     v
+   Retry
+     |
+     v
+  Fallback
+     |
+     v
+  Re-plan
 
-Dependency Health Tool
+The recovery manager selects a recovery strategy based on the failure history. A fallback is only used when another suitable evidence source exists; otherwise the investigation is re-planned.
 
-Checks the health of dependencies such as:
+Synthetic Scenarios
 
-Database
-Redis
-Payment services
-External APIs
-🧠 Agent Capabilities
-1. Planning
-
-The agent creates an explicit investigation plan before taking action.
-
-2. Tool Orchestration
-
-The agent selects and invokes appropriate diagnostic tools based on
-the investigation objective and previous observations.
-
-3. Dynamic Investigation
-
-The investigation is not restricted to a fixed sequence.
-
-The agent can change its approach based on newly discovered evidence.
-
-4. Failure Recovery
-
-Tool failures are treated as part of the investigation environment.
-
-The agent can:
-
-Retry failed operations
-Use alternative tools
-Continue with partial information
-Re-plan the investigation
-5. Evidence-Based Findings
-
-Important conclusions are connected to evidence collected during the
-investigation.
-
-6. Self-Evaluation
-
-Before generating the final report, the agent evaluates whether the
-available evidence is sufficient to support its conclusions.
-
-7. Execution Trace
-
-The system maintains a visible investigation trace containing events
-such as:
-
-PLAN_CREATED
-TOOL_STARTED
-TOOL_COMPLETED
-TOOL_FAILED
-RETRY_STARTED
-FALLBACK_TRIGGERED
-FINDING_DISCOVERED
-REPLAN_TRIGGERED
-HYPOTHESIS_VALIDATED
-REPORT_GENERATED
-🧪 Synthetic Investigation Environment
-
-The project uses a controlled synthetic observability environment for
-development and evaluation.
-
-Example data sources:
-
-data/
-├── metrics/
-├── logs/
-├── deployments/
-└── dependencies/
-
-This allows the agent to be tested against deterministic incident
-scenarios and controlled tool failures.
-
-Example scenarios include:
+The project includes deterministic scenarios for:
 
 Database degradation
 Bad deployment
 Redis outage
-Payment dependency failure
-Memory pressure
-Ambiguous evidence
-Metrics tool failure
-Log analysis failure
-🛡️ Failure Injection
+Payment provider timeout
+Ambiguous incident
 
-IncidentPilot intentionally introduces failures during testing to
-evaluate the agent's recovery behavior.
+An additional failure configuration can be used to reproduce tool failures and test recovery behavior.
 
 Example:
 
-failure_injection:
-  metrics_timeout: true
-  logs_failure: false
-  deployment_failure: false
+{
+  "scenario": "database_degradation",
+  "failure_config": {
+    "get_service_metrics": 2
+  }
+}
 
-Example execution:
+This can be used to test retry and fallback behavior.
 
-Metrics Tool
-     │
-     ▼
-  Timeout
-     │
-     ▼
-   Retry
-     │
-     ▼
-  Timeout
-     │
-     ▼
-  Fallback
-     │
-     ▼
-  Logs Tool
-     │
-     ▼
-Continue Investigation
-🧩 Design & Engineering
+Investigation Flow
 
-The project is being designed with modularity and separation of
-responsibilities in mind.
+The agent separates observations from conclusions:
 
-Potential design concepts include:
+Tool Output
+    ↓
+Evidence
+    ↓
+Hypothesis
+    ↓
+Evaluation
+    ↓
+Validated Finding / Further Investigation
 
-SOLID principles
-Strategy Pattern
-State-based workflow
-Dependency Injection
-Tool abstractions
-Event-driven execution tracing
-Structured domain models
+This prevents an LLM-generated hypothesis from automatically being treated as the confirmed root cause.
 
-Design patterns will only be introduced where they solve an actual
-engineering problem.
+API
 
-🛠️ Technology Stack
-Core
-Python
-LangGraph
-LangChain
-Pydantic
-FastAPI
-Testing & Engineering
-Pytest
-Structured logging
-Docker
-Git
-Storage
-PostgreSQL (planned)
-Redis (optional)
-AI
-LLM provider abstraction
-Tool calling
-Structured LLM outputs
-📊 Evaluation
+Start the application:
 
-The project will be evaluated using multiple controlled incident
-scenarios.
+uvicorn app.main:app --reload
 
-Potential evaluation metrics include:
+The API provides:
 
-Planning completion rate
-Tool selection success
-Investigation completion rate
-Recovery success rate
-Root-cause identification accuracy
-Unsupported-claim rate
-Number of tool calls
-Investigation latency
+GET  /health
+POST /api/v1/incidents/investigate
 
-Evaluation results will only be reported after being measured through
-actual experiments.
+Swagger documentation is available at:
 
-🗺️ Development Roadmap
-Phase 1 — Core Agent
- Domain model
- Synthetic incident data
- Investigation tools
- LangGraph state
- Planner
- Investigator
- Reporter
-Phase 2 — Agentic Behavior
- Tool calling
- Dynamic planning
- Evidence collection
- Hypothesis validation
- Self-evaluation
- Re-planning
-Phase 3 — Reliability
- Failure injection
- Retry mechanism
- Fallback strategies
- Graceful degradation
- Recovery orchestration
- Execution trace
-Phase 4 — Engineering
- FastAPI
- Persistence
- Unit tests
- Integration tests
- Evaluation framework
- Docker
-Phase 5 — Extensions
- Advanced observability
- LLM provider abstraction
- Investigation replay
- Cost and latency tracking
- Human approval checkpoints
- MCP-based tool integration
-📁 Project Structure
-incident-pilot/
+http://127.0.0.1:8000/docs
+
+Example request:
+
+{
+  "goal": "Investigate checkout error rate increase",
+  "scenario": "database_degradation",
+  "failure_config": {}
+}
+
+The response contains the generated investigation plan, structured report, and execution trace.
+
+Testing
+
+The project includes automated tests covering:
+
+Normal database degradation investigation
+Retry and fallback recovery
+Ambiguous incidents
+Bad deployments
+Redis outages
+Payment timeouts
+Re-planning after repeated tool failures
+
+Run:
+
+python -m pytest -q
+Project Structure
+app/
+├── agent/
+│   ├── graph.py
+│   ├── initializer.py
+│   ├── planner.py
+│   ├── investigator.py
+│   ├── evidence.py
+│   ├── hypothesis.py
+│   ├── evaluator.py
+│   ├── reporter.py
+│   └── state.py
 │
-├── app/
-│   ├── api/
-│   ├── agent/
-│   ├── domain/
-│   ├── tools/
-│   ├── recovery/
-│   ├── evaluation/
-│   ├── infrastructure/
-│   └── main.py
+├── tools/
+│   ├── metrics.py
+│   ├── logs.py
+│   ├── deployments.py
+│   ├── dependencies.py
+│   ├── scenarios.py
+│   └── failure_injector.py
 │
-├── data/
-│   ├── metrics/
-│   ├── logs/
-│   ├── deployments/
-│   └── dependencies/
+├── recovery/
+│   ├── manager.py
+│   └── strategy.py
 │
 ├── tests/
-│
-├── .env
-├── .gitignore
-├── requirements.txt
-├── README.md
-└── docker-compose.yml
-🚀 Development Philosophy
+└── main.py
+Design Decisions
 
-IncidentPilot is being developed using a learning-first engineering
-approach.
+The implementation separates planning, investigation, evidence extraction, hypothesis generation, evaluation, and reporting so each component has a focused responsibility.
 
-For every major component:
+A small Strategy-based recovery layer keeps retry, fallback, and re-planning independent from the investigation logic. A tool registry decouples the investigator from individual tool implementations.
 
-Understand the Problem
-        ↓
-Identify Required Concepts
-        ↓
-Learn the Concepts
-        ↓
-Design
-        ↓
-Implement
-        ↓
-Test
-        ↓
-Break
-        ↓
-Debug
-        ↓
-Improve
+The synthetic observability environment was designed to make incident scenarios and failures deterministic and reproducible.
 
-The goal is not to add technologies for the sake of complexity, but to
-build a system whose architectural decisions are understandable,
-justifiable, and testable.
+Limitations
+Observability data is synthetic rather than from real production systems.
+The evaluation dataset is relatively small.
+Formal precision/recall metrics were not measured.
+The current system is a prototype rather than a production remediation system.
+Real deployment would require stronger security, monitoring, persistent state, broader evaluation, and human approval for high-impact remediation.
+Future Improvements
 
-📌 Project Status
+With more time, I would:
 
-🚧 Active Development
+Integrate real monitoring and logging systems
+Add persistent investigation checkpoints
+Build a larger labeled incident evaluation set
+Add systematic agent evaluation
+Introduce human approval before production remediation actions
+Project Artifacts
 
-The project is currently in the initial architecture and core-agent
-development phase.
+The submission includes:
+
+Architecture diagram
+Synthetic/test traces
+Sample investigation transcripts
+Monitoring report
+Design decisions and limitations write-up
