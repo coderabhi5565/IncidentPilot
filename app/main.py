@@ -37,6 +37,7 @@ def investigate_incident(
         "tool_executions": [],
         "evidence": [],
         "hypotheses": [],
+"validated_hypotheses": [],
         "evaluation_decision": None,
         "recovery_action": "none",
         "recovery_attempts": 0,

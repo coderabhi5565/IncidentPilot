@@ -1,18 +1,13 @@
 from langchain_core.tools import tool
 
+from app.tools.scenarios import get_current_scenario
+
 
 @tool
 def get_recent_deployments(service: str) -> dict:
-    """
-    Get recent deployments for a service.
-    """
+    scenario = get_current_scenario()
+
     return {
         "service": service,
-        "deployments": [
-            {
-                "version": "checkout-v42",
-                "timestamp": "10:35",
-                "status": "success"
-            }
-        ]
+        "deployments": scenario["deployments"],
     }

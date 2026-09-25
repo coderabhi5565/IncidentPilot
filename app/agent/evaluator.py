@@ -9,16 +9,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class EvaluationResult(BaseModel):
-    decision: Literal[
-        "continue",
-        "replan",
-        "report",
-    ]
-
+    decision: Literal["continue", "replan", "report"]
     reason: str = Field(
         description="Explain why this decision was made based on the evidence"
+    )
+    validated_hypotheses: list[str] = Field(
+        description="Hypotheses that are sufficiently supported by the available evidence"
     )
 
 
@@ -61,6 +58,7 @@ Current hypotheses:
 Decide what should happen next.
 
 Decision meanings:
+The validated_hypotheses field must contain only hypotheses supported by the observed evidence.
 
 continue:
 More evidence should be gathered using the existing investigation plan.
@@ -78,12 +76,16 @@ Rules:
 - Prefer additional investigation when evidence is insufficient.
 - If all planned investigation steps have been executed and the available evidence is sufficient, choose report.
 - Do not choose continue when there are no remaining investigation steps.
+- Identify which hypotheses are sufficiently supported by the available evidence.
+- Only include a hypothesis as validated when multiple pieces of evidence support it or the evidence directly supports it.
+- Do not validate a hypothesis when important contradictory evidence exists.
+- If no hypothesis is sufficiently supported, return an empty validated_hypotheses list.
 """
 
     result = structured_llm.invoke(prompt)
 
     return {
     "evaluation_decision": result.decision,
-    "events": state["events"]
-    + [f"EVALUATION:{result.decision.upper()}"],
+    "validated_hypotheses": result.validated_hypotheses,
+    "events": state["events"] + [f"EVALUATION:{result.decision.upper()}"],
 }

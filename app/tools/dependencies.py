@@ -1,21 +1,13 @@
 from langchain_core.tools import tool
 
+from app.tools.scenarios import get_current_scenario
+
 
 @tool
 def get_dependency_health(service: str) -> dict:
-    """
-    Get health information for service dependencies.
-    """
+    scenario = get_current_scenario()
+
     return {
         "service": service,
-        "dependencies": {
-            "postgres": {
-                "status": "degraded",
-                "latency_ms": 920
-            },
-            "redis": {
-                "status": "healthy",
-                "latency_ms": 4
-            }
-        }
+        "dependencies": scenario["dependencies"],
     }

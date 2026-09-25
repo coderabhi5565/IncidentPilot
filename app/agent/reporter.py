@@ -5,11 +5,13 @@ def reporter_node(state: InvestigationState) -> dict:
     hypotheses = state["hypotheses"]
     failures = state["failures"]
     executions = state["tool_executions"]
+    validated_hypotheses = state["validated_hypotheses"]
+    
 
     likely_root_cause = (
-        hypotheses[-1]
-        if hypotheses
-        else "No root cause could be established from the available evidence."
+    validated_hypotheses[0]
+    if validated_hypotheses
+    else "No root cause could be established from the available evidence."
     )
 
     recommended_actions = []
@@ -46,6 +48,7 @@ def reporter_node(state: InvestigationState) -> dict:
         "key_findings": evidence,
         "likely_root_cause": likely_root_cause,
         "hypotheses": hypotheses,
+        "validated_findings": validated_hypotheses,
         "tools_used": list(dict.fromkeys(
             execution["tool"]
             for execution in executions

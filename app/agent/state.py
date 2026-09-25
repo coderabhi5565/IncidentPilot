@@ -8,6 +8,7 @@ class InvestigationState(TypedDict):
     tool_executions: list[dict]
     evidence: list[dict]
     hypotheses: list[str]
+    validated_hypotheses: list[str]
     evaluation_decision: str | None
 
     recovery_action: str | None

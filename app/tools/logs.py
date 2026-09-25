@@ -1,25 +1,15 @@
 from langchain_core.tools import tool
 
+from app.tools.scenarios import get_current_scenario
+
 
 @tool
 def search_logs(service: str, query: str, time_range: str) -> dict:
-    """
-    Search application logs for a service.
-    """
+    scenario = get_current_scenario()
+
     return {
         "service": service,
         "time_range": time_range,
         "query": query,
-        "matches": [
-            {
-                "timestamp": "10:42:13",
-                "level": "ERROR",
-                "message": "Database connection timeout"
-            },
-            {
-                "timestamp": "10:42:27",
-                "level": "ERROR",
-                "message": "Failed to acquire database connection"
-            }
-        ]
+        "matches": scenario["logs"],
     }
