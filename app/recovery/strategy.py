@@ -28,7 +28,6 @@ class RetryStrategy(RecoveryStrategy):
 
 
 class FallbackStrategy(RecoveryStrategy):
-
     def execute(
         self,
         tool_name: str,
@@ -41,6 +40,13 @@ class FallbackStrategy(RecoveryStrategy):
         }
 
         fallback_tool = fallback_tools.get(tool_name)
+
+        if fallback_tool is None:
+            return {
+                "action": "replan",
+                "tool": tool_name,
+                "reason": "No suitable fallback tool is available.",
+            }
 
         return {
             "action": "fallback",

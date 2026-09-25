@@ -1,8 +1,10 @@
 from langchain_core.tools import tool
 from app.tools.scenarios import get_current_scenario
 
+
 @tool
 def get_service_metrics(service: str, time_range: str) -> dict:
+    """Fetch service metrics for the requested time range."""
     scenario = get_current_scenario()
     metrics = scenario["metrics"]
 

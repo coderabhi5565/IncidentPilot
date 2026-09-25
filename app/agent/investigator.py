@@ -5,6 +5,7 @@ from app.tools.logs import search_logs
 from app.tools.deployments import get_recent_deployments
 from app.tools.dependencies import get_dependency_health
 from app.tools.failure_injector import failure_injector
+
 from app.recovery.manager import RecoveryManager
 
 
@@ -17,6 +18,7 @@ TOOL_REGISTRY = {
 
 
 recovery_manager = RecoveryManager()
+
 
 def build_tool_input(tool_name: str) -> dict:
     if tool_name == "get_service_metrics":
@@ -46,19 +48,22 @@ def build_tool_input(tool_name: str) -> dict:
         f"Unsupported tool: {tool_name}"
     )
 
+
 def investigator_node(state: InvestigationState) -> dict:
     current_step = state["current_step"]
     plan = state["plan"]
+
+    if current_step >= len(plan):
+        return {}
+
+    step = plan[current_step]
+    purpose = step["purpose"]
 
     fallback_tool = state["fallback_tool"]
 
     if fallback_tool:
         tool_name = fallback_tool
     else:
-        if current_step >= len(plan):
-            return {}
-
-        step = plan[current_step]
         tool_name = step["tool"]
 
     tool = TOOL_REGISTRY.get(tool_name)
@@ -70,15 +75,22 @@ def investigator_node(state: InvestigationState) -> dict:
             "attempt": state["recovery_attempts"] + 1,
         }
 
+        execution = {
+            "tool": tool_name,
+            "purpose": purpose,
+            "status": "failed",
+            "attempt": state["recovery_attempts"] + 1,
+            "error": f"Unknown tool: {tool_name}",
+            "recovery_action": "replan",
+        }
+
         return {
             "tool_executions": state["tool_executions"] + [
-                {
-                    "tool": tool_name,
-                    "status": "failed",
-                    "error": f"Unknown tool: {tool_name}",
-                }
+                execution
             ],
-            "failures": state["failures"] + [failure],
+            "failures": state["failures"] + [
+                failure
+            ],
             "recovery_action": "replan",
             "fallback_tool": None,
             "recovery_attempts": state["recovery_attempts"] + 1,
@@ -88,16 +100,18 @@ def investigator_node(state: InvestigationState) -> dict:
             ],
         }
 
-    service = "checkout"
-
     try:
         failure_injector.check(tool_name)
+
         tool_input = build_tool_input(tool_name)
+
         result = tool.invoke(tool_input)
-        
+
         execution = {
             "tool": tool_name,
+            "purpose": purpose,
             "status": "success",
+            "attempt": state["recovery_attempts"] + 1,
             "result": result,
         }
 
@@ -116,6 +130,7 @@ def investigator_node(state: InvestigationState) -> dict:
 
     except Exception as exc:
         attempts = state["recovery_attempts"]
+
         failure = {
             "tool": tool_name,
             "error": str(exc),
@@ -134,8 +149,11 @@ def investigator_node(state: InvestigationState) -> dict:
 
         execution = {
             "tool": tool_name,
+            "purpose": purpose,
             "status": "failed",
+            "attempt": attempts + 1,
             "error": str(exc),
+            "recovery_action": recovery_action,
         }
 
         return {

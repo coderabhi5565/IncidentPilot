@@ -1,17 +1,17 @@
 from app.agent.state import InvestigationState
 
+
 def reporter_node(state: InvestigationState) -> dict:
     evidence = state["evidence"]
     hypotheses = state["hypotheses"]
+    validated_hypotheses = state["validated_hypotheses"]
     failures = state["failures"]
     executions = state["tool_executions"]
-    validated_hypotheses = state["validated_hypotheses"]
-    
 
     likely_root_cause = (
-    validated_hypotheses[0]
-    if validated_hypotheses
-    else "No root cause could be established from the available evidence."
+        validated_hypotheses[0]
+        if validated_hypotheses
+        else "No root cause could be established from the available evidence."
     )
 
     recommended_actions = []
@@ -39,6 +39,13 @@ def reporter_node(state: InvestigationState) -> dict:
             "Collect additional observability data before taking corrective action."
         )
 
+    unresolved_questions = []
+
+    if not validated_hypotheses:
+        unresolved_questions.append(
+            "The available evidence was insufficient to establish a confirmed root cause."
+        )
+
     report = {
         "incident": state["goal"],
         "investigation_summary": (
@@ -53,12 +60,13 @@ def reporter_node(state: InvestigationState) -> dict:
             execution["tool"]
             for execution in executions
         )),
+        "execution_trace": executions,
         "failures_and_recovery": failures,
         "recommended_actions": list(dict.fromkeys(recommended_actions)),
-        "unresolved_questions": [],
+        "unresolved_questions": unresolved_questions,
     }
 
     return {
         "final_report": report,
         "events": state["events"] + ["REPORT_GENERATED"],
-    }
+    } 

@@ -85,7 +85,8 @@ def investigate_incident(
     result = graph.invoke(initial_state)
 
     return {
-        "status": "completed",
-        "report": result["final_report"],
-        "trace": result["events"],
-    }
+    "status": "completed",
+    "plan": result["plan"],
+    "report": result["final_report"],
+    "trace": result["events"],
+}
