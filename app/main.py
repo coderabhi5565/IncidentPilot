@@ -1,39 +1,55 @@
+from fastapi import FastAPI
+from pydantic import BaseModel, Field
+
 from app.agent.graph import graph
 
 
-if __name__ == "__main__":
+app = FastAPI(
+    title="IncidentPilot",
+    description="Autonomous Production Incident Investigation Agent",
+    version="1.0.0",
+)
+
+
+class InvestigationRequest(BaseModel):
+    goal: str = Field(
+        min_length=10,
+        description="Natural-language production incident to investigate",
+    )
+
+
+@app.get("/health")
+def health_check() -> dict:
+    return {
+        "status": "healthy",
+        "service": "incidentpilot",
+    }
+
+
+@app.post("/api/v1/incidents/investigate")
+def investigate_incident(
+    request: InvestigationRequest,
+) -> dict:
     initial_state = {
-        "goal": (
-            "Checkout service ka error rate last 30 minutes mein "
-            "increase hua hai. Investigate the incident."
-        ),
+        "goal": request.goal,
         "plan": [],
         "current_step": 0,
         "tool_executions": [],
         "evidence": [],
         "hypotheses": [],
         "evaluation_decision": None,
+        "recovery_action": "none",
+        "recovery_attempts": 0,
+        "failures": [],
+        "fallback_tool": None,
         "events": [],
         "final_report": None,
     }
 
     result = graph.invoke(initial_state)
 
-    print("\n=== EVENTS ===")
-    for event in result["events"]:
-        print(event)
-
-    print("\n=== PLAN ===")
-    for step in result["plan"]:
-        print(step)
-
-    print("\n=== EVIDENCE ===")
-    for item in result["evidence"]:
-        print(item)
-
-    print("\n=== HYPOTHESES ===")
-    for hypothesis in result["hypotheses"]:
-        print(hypothesis)
-
-    print("\n=== FINAL REPORT ===")
-    print(result["final_report"])
+    return {
+        "status": "completed",
+        "report": result["final_report"],
+        "trace": result["events"],
+    }

@@ -10,7 +10,15 @@ from app.agent.evaluator import evaluator_node
 from app.agent.reporter import reporter_node
 
 def evaluation_router(state: InvestigationState) -> str:
-    return state["evaluation_decision"]
+    decision = state["evaluation_decision"]
+
+    if (
+        decision == "continue"
+        and state["current_step"] >= len(state["plan"])
+    ):
+        return "report"
+
+    return decision
 
 def recovery_router(state: InvestigationState) -> str:
     return state["recovery_action"]

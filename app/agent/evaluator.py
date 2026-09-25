@@ -76,6 +76,8 @@ Rules:
 - Do not claim a root cause without supporting evidence.
 - Consider contradictions and missing evidence.
 - Prefer additional investigation when evidence is insufficient.
+- If all planned investigation steps have been executed and the available evidence is sufficient, choose report.
+- Do not choose continue when there are no remaining investigation steps.
 """
 
     result = structured_llm.invoke(prompt)

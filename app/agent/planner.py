@@ -1,10 +1,11 @@
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.agent.state import InvestigationState
-from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -16,7 +17,6 @@ class PlanStep(BaseModel):
         "get_recent_deployments",
         "get_dependency_health",
     ]
-
     purpose: str = Field(
         description="Why this tool should be used during the investigation"
     )
@@ -33,10 +33,27 @@ llm = ChatGoogleGenerativeAI(
     temperature=0
 )
 
-structured_llm = llm.with_structured_output(InvestigationPlan)
+structured_llm = llm.with_structured_output(
+    InvestigationPlan
+)
 
 
 def planner_node(state: InvestigationState) -> dict:
+    evidence_text = "\n".join(
+        f"- {item['observation']}"
+        for item in state["evidence"]
+    )
+
+    failure_text = "\n".join(
+        f"- {failure['tool']}: {failure['error']}"
+        for failure in state["failures"]
+    )
+
+    previous_plan_text = "\n".join(
+        f"- {step['tool']}: {step['purpose']}"
+        for step in state["plan"]
+    )
+
     prompt = f"""
 You are a production incident investigation planner.
 
@@ -50,10 +67,21 @@ Available tools:
 - get_recent_deployments
 - get_dependency_health
 
+Previous investigation plan:
+{previous_plan_text or "No previous plan exists."}
+
+Evidence already collected:
+{evidence_text or "No evidence collected yet."}
+
+Tool failures:
+{failure_text or "No tool failures yet."}
+
 Rules:
 - Use only the available tools.
-- Focus on gathering evidence.
+- Focus on gathering missing evidence.
 - Do not diagnose the root cause yet.
+- Do not unnecessarily repeat already completed investigation steps.
+- If the previous investigation was blocked by a tool failure, choose an alternative evidence source when possible.
 - Order the investigation logically.
 - Return the investigation steps.
 """
@@ -64,10 +92,13 @@ Rules:
         "plan": [
             {
                 "tool": step.tool,
-                "purpose": step.purpose,
+                "purpose": step.purpose
             }
             for step in plan.steps
         ],
         "current_step": 0,
-        "events": ["PLAN_CREATED"],
+        "recovery_action": "none",
+        "recovery_attempts": 0,
+        "fallback_tool": None,
+        "events": state["events"] + ["PLAN_CREATED"],
     }
