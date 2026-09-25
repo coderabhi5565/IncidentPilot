@@ -18,6 +18,33 @@ TOOL_REGISTRY = {
 
 recovery_manager = RecoveryManager()
 
+def build_tool_input(tool_name: str) -> dict:
+    if tool_name == "get_service_metrics":
+        return {
+            "service": "checkout",
+            "time_range": "last_30_minutes",
+        }
+
+    if tool_name == "search_logs":
+        return {
+            "service": "checkout",
+            "query": "error OR exception OR timeout",
+            "time_range": "last_30_minutes",
+        }
+
+    if tool_name == "get_recent_deployments":
+        return {
+            "service": "checkout",
+        }
+
+    if tool_name == "get_dependency_health":
+        return {
+            "service": "checkout",
+        }
+
+    raise ValueError(
+        f"Unsupported tool: {tool_name}"
+    )
 
 def investigator_node(state: InvestigationState) -> dict:
     current_step = state["current_step"]
@@ -65,46 +92,9 @@ def investigator_node(state: InvestigationState) -> dict:
 
     try:
         failure_injector.check(tool_name)
-        if tool_name == "get_service_metrics":
-
-            result = tool.invoke(
-                {
-                    "service": service,
-                    "time_range": "last_30_minutes",
-                }
-            )
-
-        elif tool_name == "search_logs":
-
-            result = tool.invoke(
-                {
-                    "service": service,
-                    "query": "error OR exception OR timeout",
-                    "time_range": "last_30_minutes",
-                }
-            )
-
-        elif tool_name == "get_recent_deployments":
-
-            result = tool.invoke(
-                {
-                    "service": service,
-                }
-            )
-
-        elif tool_name == "get_dependency_health":
-
-            result = tool.invoke(
-                {
-                    "service": service,
-                }
-            )
-
-        else:
-            raise ValueError(
-                f"Unsupported tool: {tool_name}"
-            )
-
+        tool_input = build_tool_input(tool_name)
+        result = tool.invoke(tool_input)
+        
         execution = {
             "tool": tool_name,
             "status": "success",

@@ -5,7 +5,6 @@ from app.recovery.strategy import (
     ReplanStrategy,
 )
 
-
 class RecoveryManager:
     def __init__(self):
         self.strategies: dict[str, RecoveryStrategy] = {
@@ -21,19 +20,18 @@ class RecoveryManager:
     ) -> dict:
         attempts = context.get("attempts", 0)
 
-        if attempts < 1:
+        if attempts == 0:
             strategy_name = "retry"
-
-        elif attempts < 2:
+        elif attempts == 1:
             strategy_name = "fallback"
-
         else:
             strategy_name = "replan"
+
         strategy = self.strategies[strategy_name]
 
         result = strategy.execute(
             tool_name,
             context,
         )
-        result["strategy"] = strategy_name
+
         return result

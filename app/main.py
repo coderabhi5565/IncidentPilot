@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from typing import Literal
+
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from app.agent.graph import graph
@@ -16,6 +18,13 @@ class InvestigationRequest(BaseModel):
         min_length=10,
         description="Natural-language production incident to investigate",
     )
+    scenario: Literal[
+        "database_degradation",
+        "bad_deployment",
+        "redis_outage",
+        "payment_timeout",
+        "ambiguous_incident",
+    ] = "database_degradation"
     failure_config: dict[str, int] = Field(
         default_factory=dict,
         description="Optional deterministic tool failures for testing recovery",
@@ -34,8 +43,29 @@ def health_check() -> dict:
 def investigate_incident(
     request: InvestigationRequest,
 ) -> dict:
+    allowed_tools = {
+        "get_service_metrics",
+        "search_logs",
+        "get_recent_deployments",
+        "get_dependency_health",
+    }
+
+    for tool_name, failures in request.failure_config.items():
+        if tool_name not in allowed_tools:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown tool in failure_config: {tool_name}",
+            )
+
+        if failures < 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failure count cannot be negative: {tool_name}",
+            )
+
     initial_state = {
         "goal": request.goal,
+        "scenario": request.scenario,
         "plan": [],
         "current_step": 0,
         "tool_executions": [],

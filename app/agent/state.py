@@ -10,6 +10,7 @@ class InvestigationState(TypedDict):
     hypotheses: list[str]
     validated_hypotheses: list[str]
     evaluation_decision: str | None
+    scenario: str
 
     recovery_action: str | None
     recovery_attempts: int
