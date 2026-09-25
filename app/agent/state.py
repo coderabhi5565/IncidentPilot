@@ -15,6 +15,7 @@ class InvestigationState(TypedDict):
     recovery_attempts: int
     failures: list[dict]
     fallback_tool: str | None
+    failure_config: dict[str, int]
 
     events: list[str]
     final_report: dict | None

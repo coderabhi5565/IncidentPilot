@@ -8,6 +8,7 @@ from app.agent.evidence import evidence_node
 from app.agent.hypothesis import hypothesis_node
 from app.agent.evaluator import evaluator_node
 from app.agent.reporter import reporter_node
+from app.agent.initializer import initialize_node
 
 def evaluation_router(state: InvestigationState) -> str:
     decision = state["evaluation_decision"]
@@ -32,12 +33,11 @@ graph_builder.add_node("evidence", evidence_node)
 graph_builder.add_node("hypothesis", hypothesis_node)
 graph_builder.add_node("evaluator", evaluator_node)
 graph_builder.add_node("reporter", reporter_node)
+graph_builder.add_node("initialize", initialize_node)
 
 
-graph_builder.add_edge(
-    START,
-    "planner",
-)
+graph_builder.add_edge(START, "initialize")
+graph_builder.add_edge("initialize", "planner")
 
 graph_builder.add_edge(
     "planner",

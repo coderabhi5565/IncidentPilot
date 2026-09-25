@@ -199,3 +199,13 @@ CURRENT_SCENARIO = "database_degradation"
 
 def get_current_scenario() -> dict:
     return SCENARIOS[CURRENT_SCENARIO]
+
+def set_current_scenario(name: str) -> None:
+    global CURRENT_SCENARIO
+
+    if name not in SCENARIOS:
+        raise ValueError(
+            f"Unknown scenario: {name}"
+        )
+
+    CURRENT_SCENARIO = name

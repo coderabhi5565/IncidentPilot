@@ -4,7 +4,7 @@ from app.tools.metrics import get_service_metrics
 from app.tools.logs import search_logs
 from app.tools.deployments import get_recent_deployments
 from app.tools.dependencies import get_dependency_health
-
+from app.tools.failure_injector import failure_injector
 from app.recovery.manager import RecoveryManager
 
 
@@ -64,7 +64,7 @@ def investigator_node(state: InvestigationState) -> dict:
     service = "checkout"
 
     try:
-
+        failure_injector.check(tool_name)
         if tool_name == "get_service_metrics":
 
             result = tool.invoke(

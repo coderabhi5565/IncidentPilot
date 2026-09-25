@@ -16,6 +16,10 @@ class InvestigationRequest(BaseModel):
         min_length=10,
         description="Natural-language production incident to investigate",
     )
+    failure_config: dict[str, int] = Field(
+        default_factory=dict,
+        description="Optional deterministic tool failures for testing recovery",
+    )
 
 
 @app.get("/health")
@@ -37,12 +41,13 @@ def investigate_incident(
         "tool_executions": [],
         "evidence": [],
         "hypotheses": [],
-"validated_hypotheses": [],
+        "validated_hypotheses": [],
         "evaluation_decision": None,
         "recovery_action": "none",
         "recovery_attempts": 0,
         "failures": [],
         "fallback_tool": None,
+        "failure_config": request.failure_config,
         "events": [],
         "final_report": None,
     }
